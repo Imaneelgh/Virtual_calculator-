@@ -1,21 +1,22 @@
+import os
 from flask import Flask, render_template, Response
 import cv2
 import mediapipe as mp
 import numpy as np
-import os
+import math
 
 app = Flask(__name__)
 
-# Déterminer si l'application est en cours d'exécution localement
-IS_LOCAL = os.environ.get('IS_LOCAL', 'true') == 'true'
+IS_LOCAL = os.getenv('IS_LOCAL', 'true').lower() == 'true'
 
 if IS_LOCAL:
     camera = cv2.VideoCapture(0)
 else:
-    camera = None
+    camera = cv2.VideoCapture(0)  # Assuming the camera is available, replace 0 with the correct device index if needed
 
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
+
 hands = mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.5, max_num_hands=1)
 
 class Button:
@@ -33,15 +34,15 @@ class Button:
         cv2.rectangle(img, (self.pos[0] + 5, self.pos[1] + 5),
                       (self.pos[0] + self.width + 5, self.pos[1] + self.height + 5),
                       shadow_color, -1)
-        
-        cv2.rectangle(img, self.pos, 
-                      (self.pos[0] + self.width, self.pos[1] + self.height), 
+
+        cv2.rectangle(img, self.pos,
+                      (self.pos[0] + self.width, self.pos[1] + self.height),
                       color, -1)
-        
+
         cv2.line(img, self.pos, (self.pos[0] + self.width, self.pos[1]), highlight_color, 2)
         cv2.line(img, self.pos, (self.pos[0], self.pos[1] + self.height), highlight_color, 2)
 
-        cv2.putText(img, self.value, (self.pos[0] + 20, self.pos[1] + 60), 
+        cv2.putText(img, self.value, (self.pos[0] + 20, self.pos[1] + 60),
                     cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
 
     def checkClick(self, x, y):
@@ -52,7 +53,7 @@ def findDistance(x, y, a, b):
 
 scientificButtonValues = [
     ["7", "8", "9", "/", "sin", "cos", "tan"],
-    ["4", "5", "6", "*", "log", "ln", "sqrt"],
+    ["4", "5",  "6", "*", "log", "ln", "sqrt"],
     ["1", "2", "3", "-", "(", ")", "^"],
     ["0", ".", "=", "+", "C", "<-", "pi"]
 ]
@@ -78,9 +79,11 @@ def gen_frames():
         if IS_LOCAL:
             success, frame = camera.read()
             if not success:
+                print("Failed to capture frame")
                 break
         else:
-            frame = np.zeros((480, 640, 3), dtype=np.uint8)  # placeholder frame
+            print("Running in non-local mode, using placeholder frame")
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)  # Placeholder frame for non-local environments
 
         frame = cv2.flip(frame, 1)
         imageHeight, imageWidth, _ = frame.shape
